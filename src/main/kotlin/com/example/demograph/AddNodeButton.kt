@@ -204,26 +204,98 @@ class AddNodeButton(
      * Create a new node from an add button click
      */
     private fun createNewNodeFromAddButton(addButtonCell: mxCell, nodeName: String) {
-        val graph = graphComponent.graph
-        graph.model.beginUpdate()
+        graphComponent.graph.model.beginUpdate()
         try {
-            // Get add button position and geometry
-            val buttonGeo = graph.getCellGeometry(addButtonCell)
-            
-            // Calculate position for the new node
-            val x = buttonGeo.x + 60
-            val y = buttonGeo.y - 30
-            
-            // Get the source node that this add button is connected to
+            // Get the add button position and source node
             val sourceCell = getSourceNodeForAddButton(addButtonCell)
+            val addButtonGeometry = graphComponent.graph.getCellGeometry(addButtonCell)
             
+            // Determine if this is a green or purple node
+            val isGreenParent = sourceCell?.style?.contains("greenNode") == true
+            val nodeStyle = if (isGreenParent) "greenNode" else ""
+            
+            // Calculate new position for the node
+            val x = addButtonGeometry.x + 20 // Nudge right
+            val y = addButtonGeometry.y - GraphManager.NODE_HEIGHT / 2 // Center vertically
+            
+            // Create node content
+            val content = NodeEditDialog.createNodeContentFromText(nodeName)
+            
+            // Create the node
+            val newNode = graphComponent.graph.insertVertex(
+                graphComponent.graph.defaultParent,
+                null,
+                content,
+                x,
+                y,
+                GraphManager.NODE_WIDTH,
+                GraphManager.NODE_HEIGHT,
+                nodeStyle // Apply the appropriate style
+            ) as mxCell
+            
+            // Connect from source node to new node with appropriate style
             if (sourceCell != null) {
-                // Create new node and connect to source
-                val nodeId = sourceCell.id + "_child"
-                graphManager.addNode(x, y, sourceCell.id)
+                val edgeStyle = if (isGreenParent) "greenConnectionEdge" else "connectionEdge"
+                graphComponent.graph.insertEdge(
+                    graphComponent.graph.defaultParent,
+                    null,
+                    "",
+                    sourceCell,
+                    newNode,
+                    edgeStyle
+                )
             }
+            
+            // Create a new add button for the new node
+            createAddButtonForNode(newNode)
+            
+            // Update connection dots
+            graphManager.updateAfterNodeChange()
         } finally {
-            graph.model.endUpdate()
+            graphComponent.graph.model.endUpdate()
+        }
+    }
+    
+    /**
+     * Create a new add button for a node
+     */
+    private fun createAddButtonForNode(node: mxCell) {
+        graphComponent.graph.model.beginUpdate()
+        try {
+            // Get node geometry
+            val nodeGeometry = graphComponent.graph.getCellGeometry(node)
+            
+            // Calculate position for the add button (to the right of the node)
+            val x = nodeGeometry.x + nodeGeometry.width + 40
+            val y = nodeGeometry.y + nodeGeometry.height / 2 - 15 // Center vertically
+            
+            // Create the add button
+            val addButtonValue = "+"
+            val addButton = graphComponent.graph.insertVertex(
+                graphComponent.graph.defaultParent, 
+                null, 
+                addButtonValue, 
+                x, 
+                y, 
+                30.0, 
+                30.0, 
+                "addButton"
+            )
+            
+            // Create edge from node to add button with appropriate style
+            val isGreenNode = node.style?.contains("greenNode") == true
+            val edgeStyle = if (isGreenNode) "greenConnectionEdge" else "connectionEdge"
+            
+            graphComponent.graph.insertEdge(
+                graphComponent.graph.defaultParent, 
+                null, 
+                "", 
+                node, 
+                addButton, 
+                edgeStyle
+            )
+        } finally {
+            graphComponent.graph.model.endUpdate()
         }
     }
 } 

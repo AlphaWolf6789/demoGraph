@@ -22,8 +22,9 @@ import javax.swing.*
 /**
  * Main class for managing the graph component and its interactions
  */
+
 class GraphManager {
-    private val graph = mxGraph()
+    private val graph = CustomGraph()
     val graphComponent = mxGraphComponent(graph)
     val parent = graph.defaultParent
     private var nodeCount = 0
@@ -32,6 +33,7 @@ class GraphManager {
     // Helper classes
     private val nodeFactory: NodeFactory
     private val dotManager: DotManager
+    private val connectionDotManager: ConnectionDotManager
     
     // Constants for node dimensions
     companion object {
@@ -43,6 +45,9 @@ class GraphManager {
         // Initialize helper classes
         nodeFactory = NodeFactory(graph)
         dotManager = DotManager(graph)
+        
+        // Set reference to this manager in the factory
+        nodeFactory.setGraphManager(this)
         
         // Register custom shapes first
         registerCustomShapes()
@@ -56,6 +61,9 @@ class GraphManager {
         // Set up panning and selection
         setupInteractions()
         
+        // Initialize connection dot manager after graph is configured
+        connectionDotManager = ConnectionDotManager(graph, graphComponent)
+        
         // Add resize listener to adjust overlay components
         graphComponent.addComponentListener(object : ComponentAdapter() {
             override fun componentResized(e: ComponentEvent?) {
@@ -65,6 +73,9 @@ class GraphManager {
         
         // Create initial root node
         createRootNode()
+        
+        // Update connection dots initial placement
+        connectionDotManager.updateConnectionDots()
     }
     
     private fun registerCustomShapes() {
@@ -85,6 +96,10 @@ class GraphManager {
         graph.isCellsSelectable = true
         graph.isCellsEditable = true
         graph.isAutoSizeCells = true
+        graph.setMultigraph(true)
+
+
+
 
         // Configure global stylesheet
         val stylesheet = graph.stylesheet
@@ -114,6 +129,8 @@ class GraphManager {
         greenNodeStyle[mxConstants.STYLE_ARCSIZE] = 6.0 // Rounded corner amount
         greenNodeStyle[mxConstants.STYLE_SHADOW] = false
         stylesheet.putCellStyle("greenNode", greenNodeStyle)
+
+
     }
     
     private fun configureGraphComponent() {
@@ -126,6 +143,9 @@ class GraphManager {
         graphComponent.isEnabled = true
         graphComponent.isEventsEnabled = true
         graphComponent.isDragEnabled = false
+        graph.isPortsEnabled = true
+graph.isAllowDanglingEdges = false
+graphComponent.connectionHandler.isEnabled = true
         
         // Set component size
         graphComponent.preferredSize = Dimension(800, 600)
@@ -256,7 +276,8 @@ class GraphManager {
                 NODE_HEIGHT,
                 "greenNode"
             ) as mxCell
-            
+            connectionDotManager.createConnectionDot(newNode)
+
             // Connect the parent node to the new node
             if (parentNode != null && parentNode != sourceCell) {
                 // Remove existing edge from parent to add button
@@ -307,20 +328,20 @@ class GraphManager {
         addNodeButton.setBounds(0, 0, graphComponent.width, graphComponent.height)
     }
     
+    /**
+     * Create the initial root node at startup
+     */
     private fun createRootNode() {
-        graph.model.beginUpdate()
-        try {
-            // Create root node using the factory
-            val vertex = nodeFactory.createRootNode(parent)
-            
-            // Add circular add button to the right of the root node
-            nodeFactory.addAddButtonToNode(vertex)
-            
-            // Increment node count
-            nodeCount++
-        } finally {
-            graph.model.endUpdate()
-        }
+        // Create the root node with a query
+        val rootNode = nodeFactory.createRootNode(parent) as mxCell
+        
+        // Add circular add button to the root node
+        nodeFactory.addAddButtonToNode(rootNode)
+        connectionDotManager.createConnectionDot(rootNode)
+
+        
+        // Update connection dots
+        connectionDotManager.updateConnectionDots()
     }
     
     fun createToolbar(): JToolBar {
@@ -411,5 +432,11 @@ class GraphManager {
         val style = graph.getCellStyle(cell)
         return style.getOrDefault(mxConstants.STYLE_SHAPE, "") == "addButton" || 
                (cell.value == "+" && cell.style?.contains("addButton") == true)
+    }
+    
+    // After a node is added, update connection dots
+    fun updateAfterNodeChange() {
+        // Update connection dots
+        connectionDotManager.updateConnectionDots()
     }
 } 

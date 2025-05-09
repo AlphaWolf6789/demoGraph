@@ -37,6 +37,10 @@ class DotManager(private val graph: mxGraph) {
         copyDotStyle[mxConstants.STYLE_STROKEWIDTH] = 1.5
         graph.stylesheet.putCellStyle("copyDot", copyDotStyle)
     }
+
+    private fun isPort(cell: mxCell): Boolean {
+        return graph.getModel().getStyle(cell)?.contains("portStyle") == true
+    }
     
     // Handle node hovering
     fun handleNodeHover(cell: Any?, e: Point) {
@@ -46,10 +50,11 @@ class DotManager(private val graph: mxGraph) {
         }
         
         // Check if the cell is a node we should react to
-        val isHoveringOverNode = cell != null && 
-                              graph.model.isVertex(cell) && 
-                              !isAddButton(cell as mxCell) &&
-                              !dotCells.contains(cell)
+        val isHoveringOverNode = cell != null &&
+    graph.model.isVertex(cell) &&
+    !isAddButton(cell as mxCell) &&
+    !dotCells.contains(cell) &&
+    !isPort(cell as mxCell)
         
         // Determine if we need to clear existing dots
         var shouldClearDots = false

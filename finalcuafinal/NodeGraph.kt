@@ -1132,12 +1132,17 @@ class NodeGraph : JPanel() {
     }
 
     // Create a connection dot for a node
-    private fun createConnectionDot(node: mxCell) {
-        val geom = graph.getCellGeometry(node)
-        val dotX = geom.x + geom.width - 10
-        val dotY = geom.y + geom.height / 2 - 10
-        val dot = graph.insertVertex(parent, null, "", dotX, dotY, 20.0, 20.0, "connectionDot") as mxCell
-        connectionDots.add(dot)
+    fun createConnectionDot(node: mxCell) {
+        // Không cần dotX, dotY nữa nếu dùng port chuẩn
+        val portGeometry = mxGeometry(1.0, 0.5, 16.0, 16.0)
+        portGeometry.setRelative(true)
+        portGeometry.offset = mxPoint(-8.0, 0.0)
+        val port = mxCell(null, portGeometry, "portStyle")
+  
+        port.setVertex(true)
+        port.setConnectable(true)
+        node.insert(port)
+        connectionDots.add(port)
     }
 
     inner class CustomMxGraph : mxGraph() {

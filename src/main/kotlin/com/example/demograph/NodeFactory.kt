@@ -10,6 +10,14 @@ import javax.swing.JOptionPane
  */
 class NodeFactory(private val graph: mxGraph) {
     
+    // Reference to GraphManager for updates
+    private var graphManager: GraphManager? = null
+    
+    // Set GraphManager reference
+    fun setGraphManager(manager: GraphManager) {
+        graphManager = manager
+    }
+    
     /**
      * Creates a root node with the specified query text
      */
@@ -83,7 +91,8 @@ class NodeFactory(private val graph: mxGraph) {
                 x, 
                 y, 
                 GraphManager.NODE_WIDTH, 
-                GraphManager.NODE_HEIGHT
+                GraphManager.NODE_HEIGHT,
+                "greenNode" // New nodes use green style
             )
             
             // Connect to previous and next steps if provided
@@ -94,6 +103,9 @@ class NodeFactory(private val graph: mxGraph) {
             if (nextStepId != null) {
                 connectToNextStep(vertex, nextStepId)
             }
+            
+            // Update connection dots after node creation
+            graphManager?.updateAfterNodeChange()
             
             return vertex
         } finally {
@@ -129,6 +141,9 @@ class NodeFactory(private val graph: mxGraph) {
             
             // Add circular add button to the new node
             addAddButtonToNode(duplicateNode)
+            
+            // Update connection dots after node creation
+            graphManager?.updateAfterNodeChange()
             
             // Show a brief message that the node was copied
             JOptionPane.showMessageDialog(
@@ -175,6 +190,9 @@ class NodeFactory(private val graph: mxGraph) {
             graph.model.beginUpdate()
             try {
                 graph.removeCells(cells)
+                
+                // Update connection dots after node deletion
+                graphManager?.updateAfterNodeChange()
             } finally {
                 graph.model.endUpdate()
             }
