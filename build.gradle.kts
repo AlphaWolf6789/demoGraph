@@ -25,8 +25,8 @@ dependencies {
         // Add necessary plugin dependencies for compilation here, example:
         // bundledPlugin("com.intellij.java")
     }
-//    implementation("com.mxgraph:jgraphx:4.2.2")
-    implementation("org.tinyjee.jgraphx:jgraphx:3.4.1.3")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.17.2")
+    implementation("com.github.vlsi.mxgraph:jgraphx:4.2.2")
 }
 
 intellijPlatform {
