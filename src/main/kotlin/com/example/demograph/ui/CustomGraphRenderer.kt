@@ -44,7 +44,7 @@ object CustomGraphRenderer {
      */
     private fun configureCommonStyles(stylesheet: mxStylesheet) {
         // Default vertex style
-        val defaultStyle = stylesheet.getDefaultVertexStyle()
+        val defaultStyle = stylesheet.defaultVertexStyle
         defaultStyle[mxConstants.STYLE_FONTCOLOR] = "#FFFFFF"
         defaultStyle[mxConstants.STYLE_FONTSTYLE] = 0
         defaultStyle[mxConstants.STYLE_FONTSIZE] = 13
@@ -61,11 +61,11 @@ object CustomGraphRenderer {
      */
     private fun configureNodeStyles(stylesheet: mxStylesheet) {
         // User query node style
-        val userQueryStyle = stylesheet.getDefaultVertexStyle()
+        val userQueryStyle = stylesheet.defaultVertexStyle
 
         userQueryStyle[mxConstants.STYLE_FILLCOLOR] = "none" // Dark fill
         userQueryStyle[mxConstants.STYLE_STROKECOLOR] = "#6366F1" // Purple border
-        userQueryStyle[mxConstants.STYLE_STROKEWIDTH] = "3"
+        userQueryStyle[mxConstants.STYLE_STROKEWIDTH] = "2"
         userQueryStyle[mxConstants.STYLE_FONTCOLOR] = "#FFFFFF"
         userQueryStyle[mxConstants.STYLE_FONTFAMILY] = "Arial"
         userQueryStyle[mxConstants.STYLE_FONTSIZE] = "12"
@@ -80,7 +80,7 @@ object CustomGraphRenderer {
         stepStyle[mxConstants.STYLE_ROUNDED] = true
         stepStyle[mxConstants.STYLE_FILLCOLOR] = "none"
         stepStyle[mxConstants.STYLE_STROKECOLOR] = "#4ADE80" // Green border
-        stepStyle[mxConstants.STYLE_STROKEWIDTH] = 3
+        stepStyle[mxConstants.STYLE_STROKEWIDTH] = 2
         stepStyle[mxConstants.STYLE_FONTCOLOR] = "#FFFFFF"
         stepStyle[mxConstants.STYLE_ALIGN] = mxConstants.ALIGN_LEFT
         stylesheet.putCellStyle("stepNode", stepStyle)
@@ -91,7 +91,7 @@ object CustomGraphRenderer {
      */
     private fun configureEdgeStyles(stylesheet: mxStylesheet) {
         // Default edge style (dotted line with arrow) - Purple for user queries
-        val edgeStyle = stylesheet.getDefaultEdgeStyle()
+        val edgeStyle = stylesheet.defaultEdgeStyle
         edgeStyle[mxConstants.STYLE_STROKECOLOR] = "#9277FF" // Purple edge
         edgeStyle[mxConstants.STYLE_STROKEWIDTH] = "2"
         edgeStyle[mxConstants.STYLE_ENDARROW] = mxConstants.ARROW_CLASSIC
@@ -99,10 +99,6 @@ object CustomGraphRenderer {
         edgeStyle[mxConstants.STYLE_EDGE] = mxConstants.EDGESTYLE_ORTHOGONAL
         edgeStyle[mxConstants.STYLE_DASHED] = "1" // Dashed line
         edgeStyle[mxConstants.STYLE_VERTICAL_ALIGN] = mxConstants.ALIGN_MIDDLE
-        edgeStyle[mxConstants.STYLE_EXIT_X] = "1.0"
-        edgeStyle[mxConstants.STYLE_EXIT_Y] = "0.5"
-        edgeStyle[mxConstants.STYLE_ENTRY_X] = "0.0"
-        edgeStyle[mxConstants.STYLE_ENTRY_Y] = "0.5"
         edgeStyle[mxConstants.STYLE_DASH_PATTERN] = "8 4" // 8px dash, 4px space
          // Tạo style riêng cho edge mặc định
         val standardEdgeStyle = HashMap<String, Any>()
@@ -115,13 +111,13 @@ object CustomGraphRenderer {
         
         // Green edge style for step nodes
         val greenEdgeStyle = HashMap<String, Any>(standardEdgeStyle)
-        greenEdgeStyle[mxConstants.STYLE_STROKECOLOR] = "#4ADE80" // Green edge for step nodes
+        greenEdgeStyle[mxConstants.STYLE_DASHED] = "#4ADE80" // Green edge for step nodes
         stylesheet.putCellStyle("stepEdge", greenEdgeStyle)
         
         // Highlighted edge style for hover
         val highlightedEdgeStyle = HashMap<String, Any>(edgeStyle)
         highlightedEdgeStyle[mxConstants.STYLE_STROKECOLOR] = "#B69EFF" // Lighter purple
-        highlightedEdgeStyle[mxConstants.STYLE_STROKEWIDTH] = 3
+        highlightedEdgeStyle[mxConstants.STYLE_STROKEWIDTH] = 4
         stylesheet.putCellStyle("highlightedEdge", highlightedEdgeStyle)
     }
     

@@ -8,6 +8,14 @@ import javax.swing.BoxLayout
 
 class NodeDialog(private val owner: JPanel, private val existingIds: Set<String>) {
     fun show(): NodeData? {
+        return showInternal(null, null, null)
+    }
+    
+    fun showWithPrevStep(prevStepId: String, xPos: Double, yPos: Double): NodeData? {
+        return showInternal(prevStepId, xPos, yPos)
+    }
+    
+    private fun showInternal(prevStepId: String?, xPos: Double?, yPos: Double?): NodeData? {
         val dialog = JDialog(SwingUtilities.getWindowAncestor(owner), "Add Node", Dialog.ModalityType.APPLICATION_MODAL)
         dialog.layout = BorderLayout()
         dialog.setSize(400, 350)
@@ -19,7 +27,7 @@ class NodeDialog(private val owner: JPanel, private val existingIds: Set<String>
         val idField = JTextField("node${existingIds.size + 1}", 20)
         val labelField = JTextField("Node ${existingIds.size + 1}", 20)
         val nextStepField = JTextField("", 20)
-        val prevStepField = JTextField("", 20)
+        val prevStepField = JTextField(prevStepId ?: "", 20)
 
         panel.add(JLabel("Node ID:"))
         panel.add(idField)
@@ -67,11 +75,15 @@ class NodeDialog(private val owner: JPanel, private val existingIds: Set<String>
                 }
             }
 
+            // Sử dụng vị trí được chỉ định hoặc vị trí mặc định
+            val nodeX = xPos ?: (40.0 + (existingIds.size % 5) * 100.0)
+            val nodeY = yPos ?: (40.0 + (existingIds.size / 5) * 60.0)
+
             result = NodeData(
                 id = id,
                 guideContent = label,
-                xNode = 40.0 + (existingIds.size % 5) * 100.0,
-                yNode = 40.0 + (existingIds.size / 5) * 60.0,
+                xNode = nodeX,
+                yNode = nodeY,
 //                width = 100.0,
 //                height = 40.0,
                 nextStep = nextStep.filter { existingIds.isEmpty() || it in existingIds },

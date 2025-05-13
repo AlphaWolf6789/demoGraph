@@ -12,7 +12,6 @@ class GraphModel {
 
     init {
         graph.isCellsSelectable = true
-//        graph.isCellsConnectable = false
         graph.isCellsEditable = true
         graph.isHtmlLabels = true
     }
@@ -23,7 +22,7 @@ class GraphModel {
         graph.model.beginUpdate()
         try {
             nodeCount++
-            val label = "<div style='text-align:center'>${nodeData.guideContent}</div>"
+            val label = "<div style='text-align:center'><b>ID:</b> ${nodeData.id}<br/>${nodeData.guideContent}</div>"
             val vertex = graph.insertVertex(
                 parent, nodeData.id, label,
                 nodeData.xNode, nodeData.yNode, nodeData.width, nodeData.height
@@ -56,7 +55,7 @@ class GraphModel {
         try {
             val nodeMap = getNodeMap()
             val cell = nodeMap[nodeData.id] as? mxICell ?: return
-            graph.model.setValue(cell, "<div style='text-align:center'>${nodeData.guideContent}</div>")
+            graph.model.setValue(cell, "<div style='text-align:center'><b>ID:</b> ${nodeData.id}<br/>${nodeData.guideContent}</div>")
         } finally {
             graph.model.endUpdate()
         }

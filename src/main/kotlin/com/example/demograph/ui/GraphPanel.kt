@@ -12,7 +12,9 @@ import com.mxgraph.util.mxEventObject
 import com.mxgraph.util.mxEventSource.mxIEventListener
 import com.mxgraph.util.mxPoint
 import java.awt.BorderLayout
+import java.awt.Color
 import java.awt.Point
+import java.awt.Rectangle
 import java.awt.event.ActionEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
@@ -26,17 +28,23 @@ class GraphPanel : JPanel(BorderLayout()) {
     private val graphComponent = mxGraphComponent(graphModel.getGraph())
     private var hoverPanel: JPanel? = null
     private var currentHoveredCell: mxICell? = null
+    
+    // Rectangle để theo dõi vùng an toàn (node + buttons)
+    private var safeZone: Rectangle? = null
 
     init {
         // Cấu hình graphComponent
-        graphComponent.isPanning = true
         graphComponent.isAutoScroll = true
         graphComponent.isEnabled = true
         graphComponent.zoomFactor = 1.2
-        graphComponent.isDragEnabled = false
+        graphComponent.isDragEnabled = false // Cho phép kéo node mặc định
         graphComponent.isConnectable = true
         graphComponent.connectionHandler.isEnabled = true
         graphComponent.preferredSize = java.awt.Dimension(800, 600)
+        graphModel.getGraph().isCellsSelectable = true
+        graphModel.getGraph().isCellsEditable = true
+        
+        // Thêm mxRubberband để cho phép chọn nhiều node
         mxRubberband(graphComponent)
 
         graphComponent.connectionHandler.addListener(mxEvent.CONNECT, mxIEventListener { sender, evt ->
@@ -60,18 +68,38 @@ class GraphPanel : JPanel(BorderLayout()) {
                 println("mxConnectionHandler: Edge created successfully")
             }
         })
+        
+        // Thêm event listener để xử lý khi cell thay đổi - để debug
+        graphModel.getGraph().addListener(mxEvent.CELLS_MOVED, mxIEventListener { sender, evt ->
+            println("Cells moved event: ${evt.properties}")
+        })
 
         // Thêm mouse listener để xử lý hover
-        graphComponent.graphControl.addMouseListener(object : MouseAdapter() {
+        graphComponent.graphControl.addMouseMotionListener(object : MouseAdapter() {
             override fun mouseMoved(e: MouseEvent) {
-                val cell = graphComponent.getCellAt(e.x, e.y) as? mxICell
-                if (cell != null && graphModel.getGraph().model.isVertex(cell) && cell != currentHoveredCell) {
-                    showHoverPanel(cell, e.point)
-                    currentHoveredCell = cell
-                } else if (cell == null || !graphModel.getGraph().model.isVertex(cell)) {
+                handleMouseMovement(e)
+            }
+        })
+        
+        // Xử lý khi chuột rời khỏi vùng đồ thị hoặc khi click
+        graphComponent.graphControl.addMouseListener(object : MouseAdapter() {
+            override fun mouseExited(e: MouseEvent) {
+                // Không ẩn panel ngay lập tức khi thoát khỏi graphControl
+                // vì có thể đang chuyển đến panel buttons
+            }
+            
+            override fun mousePressed(e: MouseEvent) {
+                // Giữ lại panel nếu click vào nút, nếu không thì ẩn
+                if (!isInSafeZone(e.point)) {
                     hideHoverPanel()
                     currentHoveredCell = null
+                    safeZone = null
                 }
+            }
+            
+            // Thêm để catch sự kiện mouseEntered nếu cần
+            override fun mouseEntered(e: MouseEvent) {
+                // Không làm gì đặc biệt khi chuột vào vùng graphControl
             }
         })
 
@@ -79,8 +107,12 @@ class GraphPanel : JPanel(BorderLayout()) {
 
         // Toolbar
         val toolbar = JToolBar()
-        toolbar.add(createButton("Add Node") { graphService.addNodeWithDialog(this) })
-        toolbar.add(createButton("Add Edge") { graphService.addEdgeBetweenSelected() })
+        toolbar.add(createButton("Add Node") { 
+            graphService.addNodeWithDialog(this)
+        })
+        toolbar.add(createButton("Add Edge") {
+            graphService.addEdgeBetweenSelected()
+        })
         toolbar.add(createButton("Delete Selected") { graphService.deleteSelected() })
         toolbar.add(createButton("Save XML") { storageService.saveGraphXml() })
         toolbar.add(createButton("Load XML") { storageService.loadGraphXml() })
@@ -92,60 +124,118 @@ class GraphPanel : JPanel(BorderLayout()) {
         add(toolbar, BorderLayout.NORTH)
         add(graphComponent, BorderLayout.CENTER)
     }
+    
+    private fun isInSafeZone(point: Point): Boolean {
+        return safeZone?.contains(point) ?: false
+    }
+    
+    private fun handleMouseMovement(e: MouseEvent) {
+        // Lấy cell tại vị trí chuột
+        val cell = graphComponent.getCellAt(e.x, e.y) as? mxICell
+        
+        // Kiểm tra xem chuột có nằm trong vùng an toàn không
+        if (isInSafeZone(e.point)) {
+            // Chuột đang ở trong vùng an toàn, không làm gì
+            return
+        }
+        
+        if (cell != null && graphModel.getGraph().model.isVertex(cell)) {
+            if (cell != currentHoveredCell) {
+                hideHoverPanel() // Đảm bảo panel cũ bị ẩn trước khi hiển thị panel mới
+                currentHoveredCell = cell
+                showHoverPanel(cell)
+                println("Mouse over cell ID: ${cell.id}")
+            }
+        } else if (cell == null) {
+            // Nếu chuột không ở trên cell và không ở trong vùng an toàn, ẩn panel
+            hideHoverPanel()
+            currentHoveredCell = null
+            safeZone = null
+        }
+    }
 
-    private fun showHoverPanel(cell: mxICell, mousePoint: Point) {
+    private fun showHoverPanel(cell: mxICell) {
         // Ẩn panel hiện tại nếu có
         hideHoverPanel()
-
+        
+        // Kiểm tra ID của cell
+        val cellId = cell.id ?: return
+        
+        println("Creating hover panel for cell ID: $cellId")
+        
         // Tạo panel mới
         hoverPanel = JPanel()
         hoverPanel?.layout = BoxLayout(hoverPanel, BoxLayout.X_AXIS)
-        hoverPanel?.border = BorderFactory.createEtchedBorder()
-
-        // Nút Edit
+        hoverPanel?.background = Color(240, 240, 240, 220) // Increased opacity
+        hoverPanel?.border = BorderFactory.createLineBorder(Color.GRAY)
+        
+        // Tạo các nút với kích thước lớn hơn để dễ click
+        
+        // Nút Add - Thêm node mới với prevStep là node hiện tại
+        val addButton = JButton("Add")
+        addButton.addActionListener {
+            graphService.addNodeFromSource(this@GraphPanel, cellId)
+            hideHoverPanel()
+            safeZone = null
+        }
+        
+        // Nút Edit - Chỉnh sửa nội dung node
         val editButton = JButton("Edit")
         editButton.addActionListener {
-//            cell.id?.let { graphService.editNodeWithDialog(this@GraphPanel, graphComponent, it) }
+            graphService.editNodeWithDialog(this@GraphPanel, cellId)
             hideHoverPanel()
+            safeZone = null
         }
-
-        // Nút Delete
+        
+        // Nút Delete - Xóa node
         val deleteButton = JButton("Delete")
         deleteButton.addActionListener {
-            cell.id?.let { graphService.deleteNode(it) }
+            graphService.deleteNode(cellId)
             hideHoverPanel()
+            safeZone = null
         }
-
-        // Nút Add Node
-        val addButton = JButton("Add Node")
-        addButton.addActionListener {
-            cell.id?.let { graphService.addNodeWithDialog(this@GraphPanel) }
-            hideHoverPanel()
-        }
-
-        hoverPanel?.add(editButton)
-        hoverPanel?.add(deleteButton)
+        
+        // Thêm các nút vào panel
         hoverPanel?.add(addButton)
+        hoverPanel?.add(Box.createHorizontalStrut(5)) // Tạo khoảng cách giữa các nút
+        hoverPanel?.add(editButton)
+        hoverPanel?.add(Box.createHorizontalStrut(5)) // Tạo khoảng cách giữa các nút
+        hoverPanel?.add(deleteButton)
 
-        // Định vị panel
-        val geometry = graphModel.getGraph().model.getGeometry(cell)
-        if (geometry != null) {
-            // Chuyển đổi tọa độ đồ thị sang tọa độ màn hình
-            val view = graphComponent.graph.view
-            val scale = view.scale
-            val translate = view.translate
-            val screenX = (geometry.x * scale) + translate.x
-            val screenY = (geometry.y * scale) + translate.y
+        // Định vị panel bên dưới node
+        val state = graphComponent.getGraph().view.getState(cell)
+        if (state != null) {
+            // Vị trí panel bên dưới node
+            val screenX = state.x
+            val screenY = state.y + state.height + 5 // +5 pixel spacing
 
+            // Tạo panel với kích thước vừa đủ
+            val buttonPanelWidth = 260 // Đã sửa từ 170 thành 270
+            val buttonPanelHeight = 30
+            
             hoverPanel?.setBounds(
                 screenX.toInt(),
-                screenY.toInt() - 30, // Hiển thị phía trên node
-                200, 30
+                screenY.toInt(),
+                buttonPanelWidth, 
+                buttonPanelHeight
             )
-            graphComponent.add(hoverPanel)
+            
+            // Tạo vùng an toàn bao gồm cả node và panel nút
+            safeZone = Rectangle(
+                state.x.toInt() - 10, // Mở rộng ra hai bên 10px
+                state.y.toInt() - 10,  // Mở rộng lên trên 10px
+                (state.width + 20).toInt(), // +20 để bù cho việc mở rộng 10px mỗi bên
+                (state.height + buttonPanelHeight + 25).toInt() // +25 bao gồm khoảng cách 5px và mở rộng thêm 10px dưới button panel
+            )
+            
+            graphComponent.add(hoverPanel, 0) // Thêm vào vị trí z-index cao nhất
+            hoverPanel?.isVisible = true
             graphComponent.revalidate()
             graphComponent.repaint()
-            println("showHoverPanel: Panel displayed at ($screenX, ${screenY - 30}), scale=$scale, translate=($translate.x, $translate.y)")
+            println("showHoverPanel: Panel displayed at ($screenX, $screenY)")
+            println("safeZone: $safeZone")
+        } else {
+            println("showHoverPanel: Could not get state for cell $cellId")
         }
     }
 
@@ -154,6 +244,7 @@ class GraphPanel : JPanel(BorderLayout()) {
             graphComponent.remove(it)
             graphComponent.revalidate()
             graphComponent.repaint()
+            println("hideHoverPanel: Panel hidden")
         }
         hoverPanel = null
     }
