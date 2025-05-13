@@ -26,6 +26,6 @@
     <extensions defaultExtensionNs="com.intellij">
         <toolWindow id="Graph Editor"
                     anchor="right"
-                    factoryClass="com.example.demograph.GraphToolWindowFactory"/>
+                    factoryClass="com.example.demograph.ui.GraphToolWindowFactory"/>
     </extensions>
 </idea-plugin>
